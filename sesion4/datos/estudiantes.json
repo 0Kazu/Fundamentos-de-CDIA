@@ -1,0 +1,62 @@
+[
+  {
+    "nombre": "Ana Pérez",
+    "carrera": "Ciencia de Datos",
+    "edad": 18,
+    "notas": [
+      85,
+      90,
+      78
+    ]
+  },
+  {
+    "nombre": "Luis Mora",
+    "carrera": "Computación",
+    "edad": 19,
+    "notas": [
+      70,
+      65,
+      80
+    ]
+  },
+  {
+    "nombre": "María Vera",
+    "carrera": "Ciencia de Datos",
+    "edad": 18,
+    "notas": [
+      95,
+      92,
+      98
+    ]
+  },
+  {
+    "nombre": "Jorge Salas",
+    "carrera": "Telemática",
+    "edad": 20,
+    "notas": [
+      55,
+      60,
+      58
+    ]
+  },
+  {
+    "nombre": "Camila Ruiz",
+    "carrera": "Ciencia de Datos",
+    "edad": 19,
+    "notas": [
+      88,
+      79,
+      91
+    ]
+  },
+  {
+    "nombre": "Diego Loor",
+    "carrera": "Computación",
+    "edad": 18,
+    "notas": [
+      62,
+      74,
+      69
+    ]
+  }
+]

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Catálogo · Tienda FCDIA</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 0; color: #1f2933; background: #f4f6f8; }
+    header { background: #2f3e4e; color: #fff; padding: 20px 32px; }
+    header h1 { margin: 0 0 6px 0; font-size: 26px; }
+    .aviso { margin: 0; font-size: 13px; color: #d9e2ec; }
+    nav { background: #768b9e; padding: 8px 32px; }
+    nav a { color: #fff; margin-right: 18px; text-decoration: none; font-size: 14px; }
+    main { padding: 20px 32px; }
+    h2 { font-size: 20px; margin: 18px 0 12px 0; }
+    #productos { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+    #productos h2 { grid-column: 1 / -1; margin-bottom: 0; }
+    .producto { background: #fff; border: 1px solid #d9e2ec; border-radius: 8px; padding: 14px; }
+    .producto h3 { margin: 0 0 8px 0; font-size: 17px; }
+    .precio { font-size: 18px; font-weight: bold; display: block; }
+    .estado { font-size: 12px; padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 6px; }
+    .disponible { background: #d5e8dd; color: #1e5b3f; }
+    .agotado { background: #f3d9d5; color: #8a2f25; }
+    .valoracion { color: #b7791f; margin: 8px 0; letter-spacing: 2px; }
+    .detalle { font-size: 13px; color: #2f3e4e; }
+    table { border-collapse: collapse; background: #fff; }
+    th, td { border: 1px solid #d9e2ec; padding: 6px 14px; text-align: left; font-size: 14px; }
+    th { background: #e9eef3; }
+    footer { padding: 14px 32px; font-size: 12px; color: #5b6b7a; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="titulo">Catálogo de productos</h1>
+    <p class="aviso">Página de práctica del curso CDIAG1003. La tienda y sus datos son ficticios.</p>
+  </header>
+  <nav>
+    <a href="#productos">Productos</a>
+    <a href="#locales">Locales</a>
+  </nav>
+  <main>
+  <section id="productos">
+    <h2>Productos</h2>
+    <article class="producto" data-categoria="Hogar" data-codigo="H-01">
+      <h3>Sartén</h3>
+      <span class="precio">$ 18,00</span>
+      <span class="estado disponible">Disponible</span>
+      <p class="valoracion" data-estrellas="4">★★★★☆</p>
+      <a class="detalle" href="productos/sarten.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Hogar" data-codigo="H-02">
+      <h3>Licuadora</h3>
+      <span class="precio">$ 45,00</span>
+      <span class="estado disponible">Disponible</span>
+      <p class="valoracion" data-estrellas="5">★★★★★</p>
+      <a class="detalle" href="productos/licuadora.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Electrónica" data-codigo="E-01">
+      <h3>Mouse</h3>
+      <span class="precio">$ 15,00</span>
+      <span class="estado disponible">Disponible</span>
+      <p class="valoracion" data-estrellas="4">★★★★☆</p>
+      <a class="detalle" href="productos/mouse.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Electrónica" data-codigo="E-02">
+      <h3>Cargador</h3>
+      <span class="precio">$ 12,50</span>
+      <span class="estado disponible">Disponible</span>
+      <p class="valoracion" data-estrellas="3">★★★☆☆</p>
+      <a class="detalle" href="productos/cargador.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Electrónica" data-codigo="E-03">
+      <h3>Audífonos</h3>
+      <span class="precio">$ 25,00</span>
+      <span class="estado agotado">Agotado</span>
+      <p class="valoracion" data-estrellas="5">★★★★★</p>
+      <a class="detalle" href="productos/audifonos.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Alimentos" data-codigo="A-01">
+      <h3>Galletas</h3>
+      <span class="precio">$ 1,80</span>
+      <span class="estado disponible">Disponible</span>
+      <p class="valoracion" data-estrellas="4">★★★★☆</p>
+      <a class="detalle" href="productos/galletas.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Alimentos" data-codigo="A-02">
+      <h3>Café</h3>
+      <span class="precio">$ 6,50</span>
+      <span class="estado disponible">Disponible</span>
+      <p class="valoracion" data-estrellas="5">★★★★★</p>
+      <a class="detalle" href="productos/cafe.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Alimentos" data-codigo="A-03">
+      <h3>Chocolate</h3>
+      <span class="precio">$ 3,20</span>
+      <span class="estado disponible">Disponible</span>
+      <p class="valoracion" data-estrellas="4">★★★★☆</p>
+      <a class="detalle" href="productos/chocolate.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Papelería" data-codigo="P-01">
+      <h3>Cuaderno</h3>
+      <span class="precio">$ 2,50</span>
+      <span class="estado disponible">Disponible</span>
+      <p class="valoracion" data-estrellas="3">★★★☆☆</p>
+      <a class="detalle" href="productos/cuaderno.html">Ver detalle</a>
+    </article>
+    <article class="producto" data-categoria="Papelería" data-codigo="P-02">
+      <h3>Bolígrafo</h3>
+      <span class="precio">$ 0,60</span>
+      <span class="estado agotado">Agotado</span>
+      <p class="valoracion" data-estrellas="2">★★☆☆☆</p>
+      <a class="detalle" href="productos/boligrafo.html">Ver detalle</a>
+    </article>
+  </section>
+  <section id="locales">
+    <h2>Locales</h2>
+    <table id="tabla-locales">
+      <thead>
+        <tr><th>Ciudad</th><th>Año de apertura</th><th>Área (m²)</th><th>Empleados</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Guayaquil</td><td>2015</td><td>420</td><td>14</td></tr>
+        <tr><td>Quito</td><td>2017</td><td>380</td><td>12</td></tr>
+        <tr><td>Cuenca</td><td>2019</td><td>210</td><td>7</td></tr>
+        <tr><td>Manta</td><td>2021</td><td>160</td><td>5</td></tr>
+        <tr><td>Machala</td><td>2022</td><td>140</td><td>4</td></tr>
+      </tbody>
+    </table>
+  </section>
+  </main>
+  <footer>
+    <p>Actualizado: <span id="fecha-actualizacion">2026-04-30</span> · Precios en dólares, con coma decimal.</p>
+  </footer>
+</body>
+</html>

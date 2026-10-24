@@ -274,9 +274,481 @@ Considere el siguiente ejemplo, el cual muestra la **misma información** de tre
 ## Estructuras de representación de datos: Numpy
 
 Dado que ya sabemos la teoría básica para entender el mundo de datos y el papel de un
-científico de datos
+científico de datos, veamos cómo comenzar a trabajar con los datos. Cuando recibamos datos, necesitamos
+de algún método / forma para inspeccionar todo ese conjunto de datos de forma eficiente.
+
+Antes de esto, es necesario saber de **numpy**. Numpy es una librería de Python escrita a bajo
+nivel (en C), la cual permite operar con arreglos.
+
+En python, podemos guardar datos en diccionarios, listas, etc. Pero no podemos operar directamente con 
+ellos, ni consultar información de forma eficiente como lo haríamos con, por ejemplo, una matriz. 
+
+- Lista de python
+     ```Python
+        lista = [85, 70, 92]
+        lista * 2
+        # Output: [85, 70, 92, 85, 70, 92]
+        ```
+
+- Array de Numpy
+     ```Python
+        arr = np.array([85, 70, 92])
+        arr * 2
+        array([170, 140, 184])
+        ```
+
+### Anatomía de un Array
+
+Existen arreglos de una y dos dimensiones:
+
+![array1](./sesion3/array1.png)
+
+```Python
+a = np.array([3, 7, 1, 9])
+```
+
+![array2D](./sesion3/array2.png)
+
+```Python
+b = np.array([[85, 90, 78], [70, 65, 80], ..., [62, 74, 69]])
+```
+
+Los **atributos de los arreglos** son:
+
+![atributos](./sesion3/atributos.png)
+
+Para el arreglo b, los valores de dichos atributos serían: dtype -> int64, shape -> (6, 3), 
+ndim -> 2, size -> 18.
+
+Podemos crear arreglos a partir de listas, pero no es la única forma de hacerlo. Existen varias
+formas para crear arreglos:
+
+![tabla](./sesion3/tablaForma.png)
+
+astype(int) **trunca**, **no redondea**.
+
+Cabe recalcar que un arreglo es homogéneo, es decir, todos sus datos son del 
+mismo tipo: Un sólo decimal automáticamente convierte todo el arreglo a float64; 
+un texto convierte todo a texto. 
+
+### Indexación y slicing en dos dimensiones
+
+Para acceder a cada elemento en particular del arreglo, procedemos con indexación
+y slicing.
+
+![indexación](./sesion3/index.png)
+
+### Vistas y copias
+
+En Python, cuando:
+
+```Python
+nota = 5
+
+otra_nota = 10
+
+nota = otra_nota
+
+nota = 0
+
+print(nota, otra_nota)
+```
+
+Es decir, no importa si `nota` ha sido asignada como `otra_nota`, nunca
+modificamos `otra_nota`. En numpy, sucede lo contrario.
+
+```Python
+primera = notas[0, :]        # vista: guardar referencia de la tabla en otra variable
+primera[0] = 100
+print(notas[0])
+# [100  90  78]
+
+notas[0, 0] = 85              # se restaura
+copia = notas[0, :].copy()    # copia: guarda COPIA de la tabla en otra variable
+copia[0] = 100
+print(notas[0])
+# [85 90 78]
+```
+
+### Operaciones vectorizadas y funciones universales
+
+Como fue dicho al inicio, podemos realizar operaciones entre arreglos.
+
+![uFun](./sesion3/opUfun.png)
+
+Las siguientes funciones universales actúan por cada elemento del arreglo:
+
+```Python
+np.sqrt(precio)  -> raíz cuadrada de cada x     np.abs(x) -> Valor abs. de cada x
+np.floor(x)      -> piso de cada x              np.log(x) -> Logaritmo de cada x
+np.maximum(a, b) -> máximo de cada x            np.exp(x) -> Exponencial de cada x
+```
+
+No son las únicas formas de operar comparando elemento a elemento. De hecho:
+
+```Python
+precio > 10 # Del arreglo precio
+# [False  True False  True]
+```
+
+### Máscaras booleanas
+
+Una máscara booleana es una condición aplicada a un arreglo. El resultado **siempre**
+será un arreglo con valores booleanos. El arreglo retornado es del mismo tamaño del 
+arreglo original, además True: 1 y False: 0 al querer hacer operaciones.
+
+![booleano](./sesion3/booleano.png)
+
+Podrías contar a las personas aprobadas (aprobo.sum()), el promedio de personas
+aprobadas (aprobo.mean()), ...
+
+Al aplicar condiciones a los arreglos, también podemos no solo tener una proposicón
+simple sino proposiciones compuestas con **&**, **|** y **~**.
+
+![condiconesC](./sesion3/condicionesC.png)
+
+### Agrupaciones y ejes
+
+![ejes](./sesion3/ejes.png)
+
+El `axis = 0` colapsa todas las columnas en una sola fila, `axis = 1` colapsa
+a todas las filas en una sola columna. Cuando realizamos una acción con los axis,
+normalmente suelen ser las siguientes agrupaciones:
+
+```Python
+.sum()  .mean() -> media  .std()    -> desviación estandar
+.min()  .max()            .argmax() -> índice de elemento más grande
+```
+
+Cabe recalcar que argmax() **por sí solo**, en una matriz, retorna el índice 
+del elemento con más valor del arreglo de una dimensión. Si (7, 4) entonces 
+argmax() te podría retornar 23 perfectamente (No te retorna la ubicación en la
+matriz).
+
+Otra situación interesante de numpy es la siguiente:
+
+```Python
+import numpy as np
+
+arreglo = np.array(["lunes", "martes", "miercoles", "jueves", "viernes"])
+
+print(arreglo[[1, 3, 0, 0]])
+# Output: ["martes, "jueves", "lunes", "lunes"]
+```
+
+### Broadcasting básico
+
+Consiste en cómo numpy suma arreglos con matrices. Si a.shape(): (a, b) 
+y b.shape(): (b, c), o a.shape(a, b) y b.shape(a, c) entonces sí es posible 
+realizar operaciones entre ellos (siendo c = 0 también es posible).
+
+![broadcasting](./sesion3/broadcasting.png)
+
+![formas](./sesion3/formas.png)
+
+### Leer datos de un archivo con np.loadtxt
+
+Hemos visto cómo trabajar de forma básica con los datos pero no cómo
+importarlos.
+
+```Python
+precio = np.loadtxt(
+    "datos/ventas_tienda.csv",
+    delimiter=",",      -> De qué forma quieres que separe las columnas
+    skiprows=1,         -> 1: omite la fila de encabezados, 0: no omite
+    usecols=4,          -> desde la columna 0 hasta 4.
+    encoding="utf-8")   -> formato de texto
+```
+
+### Errores frecuentes y su solución
+
+![errores](./sesion3/errores.png)
+
+## Estructuras de representacion de datos: Pandas
+
+Me gustaría introducir a pandas con la frase que dijo mi profesor; *"Pandas es Numpy*
+*pero con esteroides"*. Numpy no nos sirve para leer datos y mostrarlos de forma
+eficiente **por sí solo**. Por otro lado, Pandas nos ayuda a leer datos de forma más 
+eficiente **con tablas** (llamadas Dataframes).
+
+![numpyVsDataframes](./sesion4/numpyVsPandas.png)
+
+Ahora tenemos tablas (**Dataframes**), de donde cada columna y fila tiene
+etiquetas. Cada Dataframe es un conjunto de Series.
+
+### Series: un array con etiquetas
+
+Una Serie es un arreglo de numpy pero con etiquetas. Se pueden crear de la siguiente 
+forma:
+
+```Python
+ev1 = pd.Series({"Ana": 85, "Luis": 70, "María": 95, "Jorge": 55, "Camila": 88, "Diego": 62}, name="ev1")
+```
+
+Tendríamos una serie tal que:
+
+![Serie](./sesion4/Serie.png)
 
 
+```Python
+ev1["María"]         # 95   etiqueta
+ev1.iloc[2]          # 95   posición -> es indexación pero con Numpy
+ev1["Luis":"Jorge"]  # 3 valores:
+                     # fin incluido -> NO como numpy
+ 
+ev1 + 5              # vectorizado (Operaciones)
+ev1[ev1 >= 80]       # máscara
+ev1.mean()           # 75.83
+ev1.idxmax()         # 'María'
+ev1.to_numpy()       # Lo convierte en un arreglo de numpy
+```
+
+### Dataframes: conjunto de Series
+
+Un dataframe es una tabla. Aunque, en realidad, un dataframe es un conjunto
+de series. Dado que son Series independientes, cada columna puede tener
+un tipo de valor distinto. Observe lo siguiente:
+
+```Python
+nombres = np.array(["Ana", "Luis", "María", "Jorge", "Camila", "Diego"])
+notas = np.array([[85, 90, 78],
+                  [70, 65, 80],
+                  [95, 92, 98],
+                  [55, 60, 58],
+                  [88, 79, 91],
+                  [62, 74, 69]])
+
+notas[4, 2]     # ¿De quién es esta nota y de qué evaluación? El array no lo dice
+
+# con Index nos referimos a las etiquetas
+df_notas = pd.DataFrame(notas, index=nombres, columns=["ev1", "ev2", "ev3"])
+df_notas
+
+df_notas.loc["Camila", "ev3"]     # la misma nota, ahora pedida por sus etiquetas
+```
+
+En numpy teníamos un conjunto de atributos, ahora en Pandas, añadimos unos cuantos
+más:
+
+```Python
+print(df_notas.shape)      # (filas, columnas), igual que en NumPy
+print(df_notas.index)      # las etiquetas de las filas
+print(df_notas.columns)    # las etiquetas de las columnas
+```
+
+### Las operaciones se alinean por etiqueta
+
+En numpy, automáticamente se hacía un broadcasting cada vez que queríamos
+sumar un arreglo con una matriz. En Pandas, se opera etiqueta a etiqueta:
+
+![etiquetaAetiqueta](./sesion4/etiquetaA.png)
+
+Se puede evidenciar que el orden no importa (como en Numpy), sino que lo único 
+que importa es que exista una relación etiqueta a etiqueta.
+
+> NaN: Significa Not a Number
+
+### Leer e inspeccionar: lo primero con datos nuevos
+
+Al momento de leer datos, Numpy nos permitía usar la función loadtxt:
+
+```Python
+cantidad = np.loadtxt(ruta,
+    delimiter=",", skiprows=1,
+    usecols=3, dtype=int,
+    encoding="utf-8")
+precio = np.loadtxt(ruta, ...)
+categoria = np.loadtxt(ruta, ...)
+```
+
+En pandas, el proceso se reduce a pocas líneas de código:
+
+```Python
+ventas = pd.read_csv(
+    "datos/ventas_tienda.csv")
+```
+
+- read_csv(): usa la primera fila como nombres de columna y decide el tipo de cada
+columna.
+
+![atributosYFunciones](./sesion4/atributosFunciones.png)
+
+Un vistazo general de un Dataframe, con índices (filas) y sus columnas:
+
+![anatomia](./sesion4/anatomiaDataframe.png)
+
+### Columnas: seleccionar y crear
+
+![columna](./sesion4/columna.png)
+
+- ventas["ciudad"]: Retorna una serie de 200 valores.
+
+- ventas[["producto", "ciudad"]]: Retorna un Dataframe de 200 x 2 valores.
+
+- ventas["ingreso"] = ventas["cantidad"] * ventas["precio_unitario"]: Crea la columna
+ingreso como el producto entre cantidad y precio_unitario.
+
+Para conocer de forma rápida los valores de las columnas:
+
+![valoresColumnas](./sesion4/valoresColumnas.png)
+
+- unique(): retorna un array de numpy de los valores distintos en una columna.
+
+- nunique(): retorna la cantidad de valores distintos presentes en la columna.
+
+- `ventas["ciudad"].value_counts(dropna=False)`: dropna controla si se incluyen o 
+se ignoran los valores nulos (NaN) -> False: cuenta los nulos.
+
+
+### Filas: iloc por posición, loc por etiqueta
+
+- df_notas.iloc[1:4, 0:2]
+
+    ![fila1](./sesion4/fila1.png)
+
+
+    > df.iloc[]: el fin del slice NO se incluye.
+
+- df_notas.loc["Luis":"Jorge", "ev1":"ev2"]
+
+    ![fila2](./sesion4/fila2.png)
+
+    > df.loc[]: el fin del slice SÍ se incluye.
+
+### Cuando la posición y la etiqueta dejan coincidir
+
+El uso de .loc() e .iloc() debe ser empleado con razón:
+
+![etiquetaNoPos](./sesion4/etiquetaNoPosicion.png)
+
+
+### Condiciones: la máscara, ahora con etiquetas
+
+Con dataframes podemos realizar mascaras booleanas también. De hecho:
+
+![mascara](./sesion4/mascara.png)
+
+Note `ventas.loc[ventas["ciudad"] == "Guayaquil", ["producto", "ingreso"]]`, en general
+df.loc(p, ["columna1", ..., "columnaN"]) -> muestra las columnas N según el
+predicado p.
+
+![loc](./sesion4/locCompuesro.png)
+
+### Tipos de dato
+
+![datosT](./sesion4/tiposDato.png)
+
+Como se puede observar, Pandas no convierte automáticamente los tipos de dato
+que impliquen fechas. Para hacerlo, disponemos de `ventas["fecha"] = pd.to_datetime(ventas
+["fecha"])`. dt se usa en Pandas de la siguiente forma:
+
+```Python
+print(ventas["fecha"].min(), "→", ventas["fecha"].max())
+print(ventas["fecha"].dt.month.head(3).tolist())            # .dt da acceso a las partes de la fecha
+print(ventas["fecha"].dt.dayofweek.head(3).tolist())        # día de la semana: 0 = lunes … 6 = domingo
+print((ventas["fecha"] >= "2026-03-01").sum(), "ventas en marzo")
+```
+
+Para regresar un dataframe a una matriz de Numpy, usamos `df.to_numpy()`
+
+## Limpieza y preparación de datos
+
+En la vida real, nunca nos llegan datos tan limpios como los que se mostraron en los
+ejemplos. De hecho, suelen venir con filas duplicadas, valores atípicos, filas con
+valores nulos, valores atípicos por malos typeos, etc. Con Pandas podemos limpiar
+y preparar a los datos para que nos digan información útil.
+
+![datosS](./sesion5/datosSucios.png)
+
+### Medir antes de arreglar los datos
+
+Antes de empezar a limpiar los datos que vamos a revisar, es necesario saber
+qué vamos a limpiar. Es decir, nos hacemos las siguientes preguntas:
+
+- ¿Cuántas filas y columnas tiene? -> df.shape, df.info()
+
+- ¿De qué tipo es cada columna? -> df.dtypes, df.info()
+
+- ¿Cuántos valores faltan por columna? -> df.isna().sum() / df.isna() retorna True si hay NaN.
+
+- ¿Cuántos valores faltan de cada columna en total? -> df.isna().sum().sum()
+    * df.columns[df.isna().all()] -> -.all(): retorna True si ve una columna entera nula.
+
+- ¿Hay filas repetidas? -> df.duplicated().sum()
+    * df.duplicated(keep=valor): valor='first' -> la primera aparición se considera la original.
+                                 valor='last' -> sólo la última aparición se considera original.
+                                 valor=False -> marca TODAS como no originales.
+
+- ¿Qué variantes tiene el texto? -> df["ciudad"].value_counts(dropna=False)
+
+- Eliminar filas nulas: drop_duplicates() -> elimina filas repetidas.
+                        drop(columns=columnas) -> elimina las columnas "columnas"
+    * Un buen uso es: `v2 = v.drop_duplicates().drop(columns=v.columns[v.isna().all()])`
+
+
+### Texto: espacios, mayúsculas y sinónimos
+
+La mayoría de datos cualitativos no vendrán de una "forma bonita", podríamos tener "   Guayaquill" 
+en lugar de "Guayaquil".
+
+![metodosStr](./sesion5/metodosStr.png)
+
+Se aplican de la siguiente forma:
+
+```Python
+paso1 = v["ciudad"].str.strip()
+paso2 = paso1.str.title()
+abrev = {"Gye": "Guayaquil",
+         "Uio": "Quito",
+         "Cue": "Cuenca",
+         "Mec": "Manta",
+         "Mch": "Machala"}
+v["ciudad"] = paso2.replace(abrev)
+ 
+# categoria (tildes)
+cat = (v["categoria"].str.strip()
+        .str.lower()
+        .replace({"electronica":
+                  "electrónica"}))
+v["categoria"] = cat.str.capitalize()
+```
+
+### Tipos: de texto a número
+
+Hay veces que en los datos podemos encontrar datos que fueron establecidos como
+cadenas cuando realmente son flotantes o enteros. Por ejemplo: una columna de precio
+con valores como "$20.1", "$10.2" cuando debe ser "20.1", "10.2".
+
+![comoDebeSer](./sesion5/comoDebeSer.png)
+
+Para el efecto:
+
+```Python
+limpio = (v["precio_unitario"]
+           .str.replace("$", "", regex=False)
+           .str.replace(",", ".", regex=False))
+
+v["precio_unitario"] = pd.to_numeric(limpio, errors="coerce")
+
+v["precio_unitario"].describe()
+# Output: count 195   mean 13.9   max 180.0
+```
+
+- str.replace(A, B, regex=value): value = False -> le dice a Pandas que interprete el texto
+                                  como una cadena literal (el "$" es una instrucción realmente)
+
+- pd.to_numeric(df, errors="coerce"): le dice a Pandas que si encuentra algún valor que no puede
+                                      convertir, no explote y simplemente deje ese valor como NaN.
+
+
+
+### Fechas en dos formatos: convertir sin riesgo
+
+No sólo podemos rescatar números que Pandas detectó como texto, sino fechas (Que siempre Pandas
+las reconocerá como object o str)
+
+con `pd.to_datetime(v["fecha"], format=formato)` podemos establecer el formato que **creemos** que 
+tiene el texto que vamos a convertir en fecha
 
 
 
