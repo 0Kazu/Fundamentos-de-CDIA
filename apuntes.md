@@ -788,7 +788,7 @@ forma que sólo habrá un producto apilado por precio unitario. Es muy útil cua
 queremos sacar la media del precio de cada producto, etc.
 
 - v.groupby("producto")["precio_unitario"].transform("median"): "haz que cada producto en su
-precio unitario sea igual a la media" (por eso se agrupa).
+precio unitario sea igual a la mediana" (por eso se agrupa).
 
 ### Valores atípicos: detectar es mecánico, decidir no
 
@@ -799,15 +799,123 @@ hacer requiere conocer el negocio.
 Tres formas de verlo: `describe()` (mínimo y máximo), un diagrama de caja (*boxplot*) y la regla 
 del rango intercuartílico: es atípico lo que queda fuera de `[Q1 − 1.5·IQR, Q3 + 1.5·IQR]`.
 
+Para entenderlo mejor, vamos a proceder con un ejemplo. Note `ventas_sucio.csv` que está
+localizado en `./sesion5/datos/ventas_sucio.csv`. Primero analicemos el centro de masa de los
+datos, su mínimo y su máximo con `v["precio_unitario"].describe()`. Lo que retorna:
+
+```
+count    200.000000
+mean      13.064500
+std       16.881505
+min        0.600000
+25%        2.500000
+50%       12.500000
+75%       18.000000
+max      180.000000
+Name: precio_unitario, dtype: float64
+```
+
+¿Cómo es posible que el valor máximo sea 180 con un centro de masa de 13? Así podrían
+verse los atípicos. Si no hay duda respecto a si es atípico o no, lo e
+
 Necesitamos analizar el siguiente caso:
 
 ```Python
-atipico = v["precio_unitario"] > 100 # No tiene sentido que sean valores mayores a 100 (En este contexto)
-v.loc[atipico, "precio_unitario"] = precio_ref[atipico]
-v["precio_unitario"].max()
-# Output: 45.0
+atipico = v["precio_unitario"] > 100 # Busca mis atípicos (booleanos)
+v.loc[atipico, "precio_unitario"] = precio_ref[atipico] # Haz que mi atípico sea igual a la mediana
+v["precio_unitario"].max() # Comprobemos si ya no hay atípico
+# 45.0
 ```
 
+Pero esa forma sólo nor sive si sabemos qué valor es el atípico. Por otro lado, el boxplot o
+diagrama de caja nos muestra el conjunto de datos y dónde están los valores atípicos:
+
+```Python
+import matplotlib.pyplot as plt # Librería para graficar en Python
+
+# 1, 2: Define 1 fila 2 columnas (2 gráficos)
+# 9, 3: 9 de ancho por 3 de alto
+# fig: figura general
+# ejes: las figuras en particular
+fig, ejes = plt.subplots(1, 2, figsize=(9, 3))
+
+# Crea un diagrama de caja con columna "precio_unitario" y que lo mande al gráfico 1 de forma horizontal
+v.boxplot(column="precio_unitario", ax=ejes[0], vert=False)
+
+# El nombre del gráfico 1
+ejes[0].set_title("precio_unitario (con el atípico)")
+
+v.boxplot(column="cantidad", ax=ejes[1], vert=False)
+ejes[1].set_title("cantidad")
+plt.tight_layout() # Acomoda todo, listo para mostrar
+```
+
+![boxPlot](./sesion5/boxplot.png)
+
+Se puede evidenciar un valor atípico. Sin embargo, no podemos tener el valor 
+exacto de ese atípico. Entonces procedemos con la **regla del rango intercuatílico**.
+
+Según la regla del rango intercuartílico, un valor atípico es todo aquel que queda
+fuera de `[Q1 − 1.5·IQR, Q3 + 1.5·IQR]`. En efecto:
+
+```Python
+q1, q3 = v["precio_unitario"].quantile([0.25, 0.75]) # Los percentiles 25% (q1) y 75%(q2) (Estadística)
+iqr = q3 - q1 # Rango intercuartílico
+limite_sup = q3 + 1.5 * iqr # Bigote derecho o superior (El izquierdo o inferior no tiene sentido calcular)
+print("Q1:", q1, "Q3:", q3, "IQR:", iqr, "límite superior:", limite_sup)
+v[v["precio_unitario"] > limite_sup]
+
+# Output: Q1: 2.5 Q3: 18.0 IQR: 15.5 límite superior: 41.25
+```
+
+De ahí, entre los demás valores, tendremos las galles de $180 que tanto buscábamos:
+
+![tablaGalleta](./sesion5/tablaGalleta.png)
+
+Ahora, el valo de $180 ¿es un error o un dato real?
+
+- Error: galletas a 180 cuando las demás cuestan 1.8 → dos ceros de más. Se corrige con el 
+precio del producto y se documenta.
+
+- Dato real: una licuadora a 45 también sale del bigote; es la venta más cara y se queda.
+
+Se deben corregir los errores evidentes; nunca borrar un dato porque estorba.
+
+### Categóricos y estandarización
+
+En lugar de guardar la columna "ciudad" como texto puro (string u object) repitiendo "Guayaquil" 
+500 veces, la conviertes al tipo especial de Pandas category: 
+
+```Python
+v["ciudad"] = v["ciudad"].astype("category")
+```
+
+Internamente Pandas asigna un número pequeño (0 para Cuenca, 1 para Guayaquil, 2 para Quito) 
+y una sola tabla de etiquetas. Ademas permite definir un orden lógico entre palabras, por ejemplo,
+imagine que tiene una columna de tallas, bastaría con hacer un df["camisas"].sort_values() para
+mostrar la talla en orden "pequeño" < "mediano" < "grande".
+
+```Python
+import pandas as pd
+
+df = pd.DataFrame({
+    "producto": ["Camiseta A", "Camiseta B", "Camiseta C"],
+    "talla": ["mediana", "pequeña", "grande"]
+})
+
+df["talla"] = pd.Categorical(
+    df["talla"], 
+    categories=["pequeña", "mediana", "grande"], 
+    ordered=True
+)
+```
+
+En este apartado con estandarización nos referimos a dejar registros con ciudades como Gye, Quit, quiTo
+como Guayaquil, Quito. O también a dejar el formato de las fechas de forma correcta. 
+
+### Resumen de lista de verificación
+
+![listaVerificacion](./sesion5/listaVerificacion.png)
 
 
 
