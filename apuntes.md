@@ -748,7 +748,74 @@ No sólo podemos rescatar números que Pandas detectó como texto, sino fechas (
 las reconocerá como object o str)
 
 con `pd.to_datetime(v["fecha"], format=formato)` podemos establecer el formato que **creemos** que 
-tiene el texto que vamos a convertir en fecha
+tiene el texto que vamos a convertir en fecha. Retorna una fecha con el formato ISO (YYYY-MM-DD). Sin
+embargo, antes de convertir el texto a fecha, debemos asegurar el formato que creemos que tendrá 
+la cadena a convertir, si no coincide lo deja NaN (errors="coerce").
+
+Por lo tanto, podremos encontrar múltiples filas de una columna "fecha" con diferentes formatos 
+de fecha. Para que todo salga bien, aplicamos 2 veces el mismo filtro.
+
+```Python
+iso = pd.to_datetime(v["fecha"], format="%Y-%m-%d",
+                     errors="coerce")
+dmy = pd.to_datetime(v["fecha"], format="%d/%m/%Y",
+                     errors="coerce")
+v["fecha"] = iso.fillna(dmy)
+ 
+v["fecha"].isna().sum()        # debe dar 0
+# Output 0
+```
+
+![peligo](./sesion5/peligro.png)
+
+### Valores faltantes: ver, decidir, rellenar o quitar
+
+Ya sabemos identificar nulos o datos faltantes, pero, ¿Cómo decidimos que valor tendrá
+ese valor nulo?
+
+![datosFaltantes](./sesion5/datosFaltantes.png)
+
+- fillna(dato): rellena con valores nulos con los datos "dato".
+
+Analice con cuidado la siguiente línea de código:
+
+```Python
+precio_ref = v.groupby("producto")["precio_unitario"].transform("median")
+```
+
+- v.groupby("producto")["precio_unitario"]: como en SQL, colapsa todos los productos de tal
+forma que sólo habrá un producto apilado por precio unitario. Es muy útil cuando, por ejemplo,
+queremos sacar la media del precio de cada producto, etc.
+
+- v.groupby("producto")["precio_unitario"].transform("median"): "haz que cada producto en su
+precio unitario sea igual a la media" (por eso se agrupa).
+
+### Valores atípicos: detectar es mecánico, decidir no
+
+Un valor atípico (*outlier*) es un dato muy lejos del resto. Puede ser un **error** (un cero de más) 
+o un dato **real e importante** (la venta más grande del año). Detectarlo es mecánico; decidir qué 
+hacer requiere conocer el negocio.
+
+Tres formas de verlo: `describe()` (mínimo y máximo), un diagrama de caja (*boxplot*) y la regla 
+del rango intercuartílico: es atípico lo que queda fuera de `[Q1 − 1.5·IQR, Q3 + 1.5·IQR]`.
+
+Necesitamos analizar el siguiente caso:
+
+```Python
+atipico = v["precio_unitario"] > 100 # No tiene sentido que sean valores mayores a 100 (En este contexto)
+v.loc[atipico, "precio_unitario"] = precio_ref[atipico]
+v["precio_unitario"].max()
+# Output: 45.0
+```
+
+
+
+
+
+
+
+
+
 
 
 
