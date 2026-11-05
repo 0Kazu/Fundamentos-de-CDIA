@@ -420,6 +420,9 @@ normalmente suelen ser las siguientes agrupaciones:
 .min()  .max()            .argmax() -> índice de elemento más grande
 ```
 
+Podrías hacer `df.sum()` si y solo si TODAS sus columnas son numéricas o booleanos. Caso contrario
+tendrá error al querer sumar. Retorna todas las sumas en cada columna numérica que existe.
+
 Cabe recalcar que argmax() **por sí solo**, en una matriz, retorna el índice 
 del elemento con más valor del arreglo de una dimensión. Si (7, 4) entonces 
 argmax() te podría retornar 23 perfectamente (No te retorna la ubicación en la
@@ -468,7 +471,7 @@ precio = np.loadtxt(
 
 Me gustaría introducir a pandas con la frase que dijo mi profesor; *"Pandas es Numpy*
 *pero con esteroides"*. Numpy no nos sirve para leer datos y mostrarlos de forma
-eficiente **por sí solo**. Por otro lado, Pandas nos ayuda a leer datos de forma más 
+eficiente **por sí solo**. Por otro lado, Pandas nos ayuda a leer datos de forma más
 eficiente **con tablas** (llamadas Dataframes).
 
 ![numpyVsDataframes](./sesion4/numpyVsPandas.png)
@@ -651,6 +654,20 @@ print((ventas["fecha"] >= "2026-03-01").sum(), "ventas en marzo")
 
 Para regresar un dataframe a una matriz de Numpy, usamos `df.to_numpy()`
 
+### Guardar los datos
+
+Luego de saber lo básico sobre dataframe. Es necesario además saber cómo podemos exportar
+un data frame a un fichero tipo `.csv`.
+
+```Python
+ventas.to_csv("ruta", index=False)
+```
+
+con `index=False` se indica que el dataframe no incluirá la columna de índices (El número
+que identifica a las filas). Caso contrario (True), se incluirá una nueva columna cuyo nombre
+es `Unnamed: 0`.
+
+
 ## Limpieza y preparación de datos
 
 En la vida real, nunca nos llegan datos tan limpios como los que se mostraron en los
@@ -669,12 +686,12 @@ qué vamos a limpiar. Es decir, nos hacemos las siguientes preguntas:
 
 - ¿De qué tipo es cada columna? -> df.dtypes, df.info()
 
-- ¿Cuántos valores faltan por columna? -> df.isna().sum() / df.isna() retorna True si hay NaN.
+- ¿Cuántos valores faltan por columna? -> df.isna().sum() / df.isna() retorna True si hay NaN (Retorna un dataframe donde hay True en las posiciones NaN).
 
 - ¿Cuántos valores faltan de cada columna en total? -> df.isna().sum().sum()
-    * df.columns[df.isna().all()] -> -.all(): retorna True si ve una columna entera nula.
+    * df.columns[df.isna().all()] -> -.all(): retorna un df  con True en las columnas llenas de NaN.
 
-- ¿Hay filas repetidas? -> df.duplicated().sum()
+- ¿Hay filas repetidas? -> df.duplicated().sum() (Retorna arreglo de booleanos. Con sum retorna cantidad)
     * df.duplicated(keep=valor): valor='first' -> la primera aparición se considera la original.
                                  valor='last' -> sólo la última aparición se considera original.
                                  valor=False -> marca TODAS como no originales.
@@ -916,8 +933,6 @@ como Guayaquil, Quito. O también a dejar el formato de las fechas de forma corr
 ### Resumen de lista de verificación
 
 ![listaVerificacion](./sesion5/listaVerificacion.png)
-
-
 
 
 
