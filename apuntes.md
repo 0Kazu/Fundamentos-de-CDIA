@@ -802,7 +802,7 @@ ese valor nulo?
 Analice con cuidado la siguiente línea de código:
 
 ```Python
-precio_ref = v.groupby("producto")["precio_unitario"].transform("median")
+precio_ref = v.groupby("producto")["precio_unitario"].transform("median") # Se lee como precio por producto
 ```
 
 - v.groupby("producto")["precio_unitario"].funcion_de_agregación: como en SQL, colapsa todos los productos de tal
@@ -869,7 +869,8 @@ ejes[0].set_title("precio_unitario (con el atípico)")
 
 v.boxplot(column="cantidad", ax=ejes[1], vert=False)
 ejes[1].set_title("cantidad")
-plt.tight_layout() # Acomoda todo, listo para mostrar
+plt.tight_layout() # Acomoda todo, siempre ponerlo al tener varias imangenes
+plt.show()
 ```
 
 ![boxPlot](./sesion5/boxplot.png)
@@ -963,7 +964,7 @@ según una columna, **aplica** una función a cada grupo y **combina** los resul
 fila por grupo. El resultado es una Series (o DataFrame) cuyo **índice son los grupos**.
 
 ```
-v.groupby("ciudad")["ingreso"].sum()
+v.groupby("ciudad")["ingreso"].sum()         <=> Ingreso por ciudad
    └── clave ──┘   └ columna ┘ └ función ┘
 ```
 
@@ -1648,7 +1649,7 @@ for ax, b in zip(axes, [5, 30, 150]):
     ax.set_xlabel("cosecha (kg)")
 
 axes[0].set_ylabel("número de ciclos")
-fig.tight_layout()
+fig.tight_layout() # puede usar fig o plt
 plt.show()
 ```
 
@@ -1863,6 +1864,700 @@ quedan fuera de los bigotes, apenas.
 - *Zona*: Guayas concentra el 43 % de los ciclos; El Oro, el 24 %.
 
 Cada frase tiene **un número** y **una lectura**.
+
+
+## Relaciones entre variables: dispersión y correlación
+
+Antes describimos **una variable por separado** (centro, dispersión, forma, atípicos). Sin embargo, 
+casi todas las preguntas de negocio relacionan **dos**: ¿los ciclos más largos dan camarones más pesados?,
+¿las piscinas más grandes cosechan más?, ¿vender más unidades deja más margen? Veremos cómo **ver** 
+una relación (diagrama de dispersión), cómo **medirla** con un número (correlación) y qué **no** dice 
+ese número.
+
+### Dos variables numéricas: el diagrama de dispersión
+
+Para ver cómo se relacionan 2 variables x e y usamos un diagrama de dispersión. El diagrama de
+dispersión analiza cómo cambian los registros de x e y en cada fila. `axis.scatter(x, y)` lo dibuja.
+
+| Pregunta | Qué mirar | Ejemplo |
+| :-- | :-- | :-- |
+| **Dirección** | ¿cuando x sube, y sube (positiva) o baja (negativa)? | más días de cultivo → más peso |
+| **Forma** | ¿los puntos siguen una **recta**, una curva, o nada? | una recta: relación lineal |
+| **Fuerza** | ¿están cerca de la forma o muy dispersos? | una nube ancha: relación débil |
+| **Puntos raros** | ¿hay puntos lejos de todos? | una piscina de 52 ha |
+
+
+```Python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(7, 4.5))
+ax.scatter(c["dias"], c["peso_g"], alpha=0.5, color="#768B9E") # alpha permite ver grado de acumulación de puntos
+ax.set_xlabel("días de cultivo")
+ax.set_ylabel("peso final (g)")
+ax.set_title("A más días de cultivo, más peso: relación positiva, lineal, moderada-fuerte")
+plt.show()
+```
+
+![primerVistazo](./sesion10/primerVistazoRelacion.png)
+
+
+### Medir la relación: el coeficiente de correlación de Pearson
+
+El **coeficiente de correlación de Pearson** (`r`) resume la dispersión en un número entre **−1 y 1**:
+
+- el **signo** dice la dirección (estrictamente creciente o estrictamente decreciente);
+- el **valor absoluto** dice la fuerza de la relación **lineal**: 1 o −1 es una recta perfecta; 
+0 es «ninguna relación lineal».
+
+Se calcula a partir de la **covarianza** (cuánto se mueven juntas las dos variables respecto de sus 
+medias) dividida entre las dos desviaciones estándar: por eso **no tiene unidades** y no cambia si 
+se pasa de gramos a kilos. En pandas, el coeficiente de correlación: `x.corr(y)` -> `serieA.corr(serieB)`.
+
+| \|r\| | Lectura habitual (guía, no ley) |
+| :-- | :-- |
+| menos de 0,3 | débil o nula |
+| 0,3 a 0,7 | moderada |
+| más de 0,7 | fuerte |
+
+Lo que `r` **no** mide: relaciones no lineales (una curva en U puede dar `r ≈ 0`), y es sensible 
+a los atípicos (un punto lejano cambia mucho el valor). **Por eso el gráfico va primero**.
+
+![correlacion](./sesion10/relacion.png)
+
+Ahora, en `r_ha_cos` está la correlación de Pearson entre `hectareas` y `cosecha_kg` 
+y en `r_den_sup` la de `densidad` con `supervivencia`.
+
+```Python
+r_ha_cos = c["hectareas"].corr(c["cosecha_kg"])
+r_den_sup = c["densidad"].corr(c["supervivencia"])
+print("hectáreas-cosecha:", round(r_ha_cos, 2), "| densidad-supervivencia:", round(r_den_sup, 2))
+# Output:
+# hectáreas-cosecha: 0.84 | densidad-supervivencia: -0.03
+```
+
+Observe los diagramas de dispersión:
+
+![relacionEjemplo](./sesion10/relacionEjemplo.png)
+
+### Coeficiente de correlación de Spearman: correlación de rangos
+
+El coeficiente de Pearson mide relaciones lineales y es sensible a los datos atípicos. Cuando 
+la relación es creciente (o decreciente) pero no lineal, o hay valores atípicos, conviene 
+trabajar con los rangos de los datos en lugar de sus valores.
+
+> Rango: posición de x cuando está ordenado de menor a mayor.
+
+La correlación de **Spearman** (`method="spearman"`) hace lo mismo que Pearson pero sobre 
+los **rangos** (el puesto de cada valor: 1.º, 2.º, …) en vez de sobre los valores. Mide si
+la relación es **monótona** (siempre sube o siempre baja), sea recta o curva. Conviene cuando:
+
+- la relación es claramente **no lineal** pero monótona (una curva que siempre sube).
+- hay **atípicos** que deforman a Pearson;
+- alguna variable es **ordinal** (una escala de 1 a 5, tallas, niveles).
+
+Si Pearson y Spearman se parecen, la relación es aproximadamente lineal y sin atípicos influyentes. 
+Si Spearman es claramente mayor, hay una relación monótona que la recta no captura, o un atípico 
+que tira de Pearson.
+
+```Python
+# En cosechas: hectáreas-cosecha con y sin el efecto de la piscina de 52 ha
+fig, ax = plt.subplots(1, 2, figsize=(10, 4.5))
+ax[0].scatter(c["hectareas"], c["cosecha_kg"], alpha=0.5, color="#768B9E")
+ax[0].set_xlabel("hectáreas")
+ax[0].set_ylabel("cosecha (kg)")
+ax[0].set_title(f"Pearson = {c['hectareas'].corr(c['cosecha_kg']):+.2f}")
+ax[1].scatter(c["hectareas"], c["cosecha_kg"], alpha=0.5, color="#768B9E")
+ax[1].set_xlabel("hectáreas")
+ax[1].set_ylabel("cosecha (kg)")
+ax[1].set_title(f"Spearman = {c['hectareas'].corr(c['cosecha_kg'], method='spearman'):+.2f}")
+plt.show()
+
+
+print("Pearson :", round(c["hectareas"].corr(c["cosecha_kg"]), 3))
+print("Spearman:", round(c["hectareas"].corr(c["cosecha_kg"], method="spearman"), 3), " <- parecidas: lineal, el atípico no cambia la conclusión")
+
+# Output
+# Pearson : 0.84
+# Spearman: 0.816  <- parecidas: lineal, el atípico no cambia la conclusión
+```
+
+![ambasRelaciones](./sesion10/ambasRelaciones.png)
+
+
+### Todas las parejas a la vez: la matriz de correlación y el mapa de calor
+
+`dataframe.corr()` calcula `r` para **todas las parejas** de columnas numéricas: una tabla cuadrada y 
+simétrica con 1 en la diagonal. Solo se le pasan las columnas que tiene sentido correlacionar (no
+identificadores ni códigos). Un **mapa de calor** (*heatmap*) la pinta: color por valor, de −1 
+(azul) a 1 (rojo), con el número encima. Con matplotlib son unas pocas líneas (`imshow` + barra 
+de color + texto); seaborn (otra librería) lo hace en una (`sns.heatmap`).
+
+Cómo se lee: buscar las celdas **lejos de 0** (fuertes), comprobar su signo, y preguntarse si una 
+pareja fuerte es una **relación real** o dos columnas que miden casi lo mismo (**redundantes**). 
+Por ejemplo:
+
+```Python
+numericas = ["dias", "hectareas", "densidad", "supervivencia", "peso_g", "cosecha_kg", "alimento_kg", "precio_kg"]
+m = c[numericas].corr().round(2)
+m
+```
+
+![correlacionTabla](./sesion10/correlacionTabla.png)
+
+En el mapa de calor:
+
+![correlacionVariables](./sesion10/correlacionVariables.png)
+
+```Python
+def mapa_calor(m, ax, titulo):
+    # Hacer la tabla gráfica mapeada con colores
+    im = ax.imshow(m, cmap="RdBu_r", vmin=-1, vmax=1) # Crea una tabla con valores de m mapeado con colores
+    ax.set_xticks(range(len(m)), labels=m.columns, rotation=45, ha="right")
+    ax.set_yticks(range(len(m)), labels=m.index)
+
+    # Mostrar cada valor dentro del mapa (Cada correlación)
+    for i in range(len(m)):    
+        for j in range(len(m)):
+            ax.text(j, i, f"{m.iloc[i, j]:.2f}", ha="center", va="center", fontsize=8,
+                    color="white" if abs(m.iloc[i, j]) > 0.6 else "black")
+    ax.figure.colorbar(im, ax=ax, label="r de Pearson")
+    ax.set_title(titulo)
+
+fig, ax = plt.subplots(figsize=(8, 6.5))
+mapa_calor(m, ax, "Correlaciones entre las variables de los ciclos de cosecha")
+fig.tight_layout()
+plt.show()
+```
+
+Ahora bien, con la librería `seaborn`es aún más sencillo:
+
+```Python
+# El atajo de seaborn: la misma matriz en una línea
+import seaborn as sns
+
+fig, ax = plt.subplots(figsize=(8, 6.5))
+
+sns.heatmap(m, annot=True, cmap="RdBu_r", vmin=-1, vmax=1, ax=ax)
+ax.set_title("La misma matriz con seaborn")
+plt.show()
+```
+
+![seabornAtajo](./sesion10/seabornAtajo.png)
+
+Lectura de la matriz (las parejas con |r| > 0,7):
+
+- `cosecha_kg`–`alimento_kg` (0.98): **redundantes**. El alimento se dosifica según la biomasa: a 
+más cosecha, más alimento. Las dos columnas cuentan casi lo mismo; en un análisis se usa una de 
+ellas (o su cociente, el factor de conversión).
+
+- `hectareas`–`cosecha_kg` (0.84): una piscina más grande cosecha más kilos. Es una relación 
+de **tamaño**, no de manejo: por eso en la sección 6 se compara **por hectárea**.
+
+- `dias`–`peso_g` (0.7): más días de cultivo, camarón más pesado. Esta sí es una relación de manejo.
+
+Casi todo lo demás queda por debajo de 0,4: supervivencia y precio apenas se relacionan linealmente 
+con las otras.
+
+
+### Todas las dispersiones de un vistazo, y una tercera variable con el color
+
+`pd.plotting.scatter_matrix` dibuja la dispersión de **cada pareja** de columnas 
+(y el histograma de cada una en la diagonal): es la versión gráfica de la matriz de 
+correlación, y muestra lo que `r` no ve (curvas, grupos, atípicos). Con más de 5 o 6 
+columnas es evidente que se vuelve ilegible: elija las que importan. (En seaborn: `sns.pairplot`.)
+
+
+```Python
+pd.plotting.scatter_matrix(c[["dias", "peso_g", "hectareas", "cosecha_kg"]], figsize=(9, 9), diagonal="hist", alpha=0.4, color="#768B9E")
+plt.suptitle("Cada pareja de variables, de un vistazo", y=0.93)
+plt.show()
+```
+
+![multipleHisto](./sesion10/multipleHisto.png)
+
+
+Una **tercera variable categórica** entra en una dispersión como **color**: un `ax.scatter` 
+por grupo, con `label=` y `ax.legend()`. Así se ve si la relación es la misma en todos los grupos.
+Esto es:
+
+```Python
+fig, ax = plt.subplots(figsize=(7.5, 4.8))
+
+for lab, grupo in c.groupby("laboratorio"):
+    ax.scatter(grupo["dias"], grupo["peso_g"], alpha=0.6, s=18, label=lab)
+    
+ax.set_xlabel("días de cultivo")
+ax.set_ylabel("peso final")
+ax.set_title("La relación dias-peso no depende del origen de la larva")
+ax.legend(title="laboratorio")
+plt.show()
+```
+
+![relacionDiasPeso](./sesion10/relacionDiasPeso.png)
+
+
+## Correlación no es causalidad (y por qué el gráfico va primero)
+
+Una correlación alta dice que dos variables **se mueven juntas**. No dice que una **cause** la otra.
+
+1. **Una tercera variable** mueve a las dos. En cosechas, `alimento_kg` y `cosecha_kg` tienen r = 0,98:
+no es que dar más alimento produzca más cosecha; las dos crecen con el **tamaño** de la piscina
+(hectáreas × densidad). Para comparar manejo entre piscinas hay que **normalizar** (por hectárea,
+por persona, por día).
+
+2. **Dirección al revés**: ¿el precio sube porque el camarón es grande, o se cultiva más días porque
+el precio del grande es bueno? El número no lo sabe.
+
+3. **Casualidad**: con 8 variables hay 28 parejas; con pocos datos, alguna sale correlada por azar.
+Una correlación "sorprendente" con pocos datos se verifica antes de contarla.
+
+Y el gráfico va primero porque **el mismo `r` puede venir de nubes muy distintas**.
+
+
+## Series de tiempo
+
+Hasta ahora las filas de una tabla no tenían orden: daba igual leerlas de arriba abajo o al revés. 
+Cuando una columna es una **fecha**, el orden importa: aparece la pregunta `¿cómo **cambia** esto con el tiempo?` 
+(¿crece?, ¿tiene temporada?, ¿qué día de la semana es más fuerte?, ¿qué pasó en diciembre?). Veremos 
+cómo pandas entiende las fechas, cómo cambiar de **frecuencia** (de días a semanas o meses), 
+cómo ver la **tendencia** detrás del ruido y cómo descubrir el **patrón que se repite**.
+
+Estaremos trabajando con los siguientes dataframes:
+
+```Python
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+vd = pd.read_csv("datos/ventas_diarias.csv", parse_dates=["fecha"])    # parse_dates: la columna llega como fecha, no como texto
+v = pd.read_csv("datos/ventas_completo.csv", parse_dates=["fecha"])
+c = pd.read_csv("datos/cosechas.csv", parse_dates=["fecha_siembra"])
+e = pd.read_csv("datos/entregas.csv", parse_dates=["fecha"])
+```
+
+### Fechas en pandas: `datetime64`, `to_datetime` y el accesor `.dt`
+
+Como sabemos, un archivo CSV guarda las fechas como **texto** (`"2024-01-02"`). Para que pandas 
+pueda ordenarlas, restarlas o agruparlas por mes hay que convertirlas al tipo **`datetime64`**: 
+con `parse_dates=` al leer (como arriba con `parse_dates`) o con `pd.to_datetime(columna)` 
+después. Si el texto no está en formato ISO (`AAAA-MM-DD`), se indica el formato: 
+`pd.to_datetime(s, format="%d/%m/%Y")`.
+
+Una vez convertida, el accesor **`.dt`** saca las partes de la fecha: `.dt.year`, `.dt.month`, 
+`.dt.day`, `.dt.dayofweek` (0 = lunes … 6 = domingo), `.dt.day_name()`, `.dt.to_period("M")` 
+(el mes como periodo). Y las fechas se **restan**: la diferencia es un `Timedelta` (`.dt.days` 
+da los días).
+
+
+```Python
+print("tipo de la columna fecha:", vd["fecha"].dtype)
+print("primera y última fecha:", vd["fecha"].min().date(), "→", vd["fecha"].max().date())
+print("días que abarca:", (vd["fecha"].max() - vd["fecha"].min()).days + 1, "| filas:", len(vd), "(faltan algunos días: sección 2)")
+
+# Output 
+# tipo de la columna fecha: datetime64[us]
+# primera y última fecha: 2024-01-02 → 2025-12-31
+# días que abarca: 730 | filas: 720
+```
+
+De igual forma:
+
+```Python
+# Texto -> fecha, con y sin formato explícito
+texto = pd.Series(["2026-11-09", "2026-11-11"])
+print(pd.to_datetime(texto).dt.day_name().tolist())     # ISO: no hace falta formato
+
+texto2 = pd.Series(["09/11/2026", "11/11/2026"])    # día/mes/año (formato de Ecuador)
+print(pd.to_datetime(texto2, format="%d/%m/%Y").dt.day_name().tolist())   # sin format= pandas puede leer 09/11 como 11 de septiembre
+
+# Output
+# ['Monday', 'Wednesday']
+# ['Monday', 'Wednesday']
+```
+
+Más métodos:
+
+```Python
+# Las partes de la fecha con .dt (0 = lunes ... 6 = domingo)
+DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+
+vd["anio"] = vd["fecha"].dt.year 
+vd["mes"] = vd["fecha"].dt.month
+vd["dia_semana"] = vd["fecha"].dt.dayofweek
+vd["nombre_dia"] = vd["dia_semana"].map(dict(enumerate(DIAS)))
+
+vd.head(7)
+```
+
+![suTurnoXD](./sesion11/suTurnoPor3Minutos.png)
+
+### El índice temporal: seleccionar por fecha y encontrar los huecos
+
+Cuando la fecha pasa a ser el **índice** (`set_index("fecha")`, ordenado con `sort_index()`), la 
+tabla se convierte en una **serie de tiempo** y "pandas entiende" las fechas al seleccionar:
+
+- `d.loc["2025-12"]` → todo diciembre de 2025; `d.loc["2024"]` → todo 2024 (selección por texto parcial);
+- `d.loc["2025-05-08":"2025-05-11"]` → un rango de fechas, **incluidos** los dos extremos.
+
+Y permite ver qué fechas **faltan**: `asfreq("D")` fuerza una fila por día y pone `NaN` donde 
+no había datos. Qué hacer con un hueco depende de su **causa**: un día de cierre vale 
+0 (no se vendió); un día en que el sistema no registró se puede **interpolar** (`interpolate()`) 
+o dejar en `NaN`; siempre se menciona cualquier cambio que se hizo.
+
+
+```Python
+d = vd.set_index("fecha").sort_index()     # la fecha como índice, ordenado
+d.loc["2025-12", ["n_ventas", "ingreso", "promocion"]].head()
+```
+
+![de6a7Minutos](./sesion11/6a7Minutos.png)
+
+
+```Python
+# Un rango de fechas (los dos extremos incluidos): la semana del Día de la Madre de 2025
+d.loc["2025-05-08":"2025-05-11", ["n_ventas", "ingreso", "nombre_dia"]]
+```
+
+![miturno](./sesion11/miturno.png)
+
+
+```Python
+# ¿Qué días faltan? asfreq("D") pone una fila por día ENTRE la primera y la última fecha (NaN donde no había fecha registrada en ventas diarias)
+completo = d.asfreq("D") # as frequency = Day
+faltan = completo.index[completo["ingreso"].isna()]
+
+print(len(faltan), "días sin fila:")
+print([f.strftime("%Y-%m-%d (%a)") for f in faltan])
+
+# Output
+# 10 días sin fila:
+# ['2024-03-29 (Fri)', '2024-05-01 (Wed)', '2024-12-25 (Wed)', '2025-01-01 (Wed)', '2025-04-18 (Fri)', '2025-05-01 (Thu)', '2025-09-16 (Tue)', '2025-09-17 (Wed)', '2025-09-18 (Thu)', '2025-12-25 (Thu)']
+```
+
+En el caso de que no se venda todos los días, es decir, que la tienda no esté abierta todos los
+días o hay un "hueco" en el sistema, entonces:
+
+```Python
+# Dos huecos, dos decisiones: los cierres valen 0; el hueco del sistema (16-18 sept. 2025) se interpola
+ingreso_c = completo["ingreso"].copy()
+cierres = ["2024-03-29", "2024-05-01", "2024-12-25", "2025-01-01", "2025-04-18", "2025-05-01", "2025-12-25"]
+
+ingreso_c.loc[cierres] = 0                 # tienda cerrada: no se vendió -> el negocio lo dice
+ingreso_c = ingreso_c.interpolate()        # el hueco del sistema: línea recta entre los vecinos
+
+print(ingreso_c.loc["2025-09-14":"2025-09-20"].round(1))
+print("\nNaN que quedan:", ingreso_c.isna().sum())
+ingreso_c.loc["2025-09-14":"2025-09-20"].round(1)
+
+"""
+fecha
+2025-09-14    329.2
+2025-09-15    465.8
+2025-09-16    482.9
+2025-09-17    499.9
+2025-09-18    517.0
+2025-09-19    534.1
+2025-09-20    552.8
+Freq: D, Name: ingreso, dtype: float64
+NaN que quedan: 0
+"""
+```
+
+### Cambiar de frecuencia: `resample`
+
+Los datos llegan **día a día**, pero las preguntas se hacen por **semana**, por **mes** o por 
+**año**. `resample("ME")` agrupa el índice temporal en intervalos regulares (como un `groupby`
+por periodo) y después se elige la agregación: `.sum()` para totales, `.mean()` para promedios
+, `.size()` para contar filas (eventos), `.agg([...])` para varias. Alias de frecuencia 
+habituales: `"D"` día, `"W"` semana (termina en domingo), `"ME"` fin de mes, `"QE"` 
+trimestre, `"YE"` año.
+
+La frecuencia **correcta** es la que responde la pregunta: el ingreso diario es ruidoso 
+(día de la semana, promociones); el semanal ya muestra la temporada; el mensual muestra la 
+tendencia. Más agregado = menos ruido, pero también menos detalle.
+
+Es decir, si grafica los 720 días seguidos en una línea, verá un serrucho gigante subiendo 
+y bajando todo el tiempo (porque todos los sábados se vende más que los martes, o porque hubo 
+una promoción un día suelto). A esas variaciones cortas que tapan la vista general se les llama 
+ruido.
+
+```Python
+semanal = d["ingreso"].resample("W").sum() # una fila por semana (etiqueta: el domingo que la cierra)
+# Agrupa todos los ingresos por semana sumándolos
+
+mensual = d["ingreso"].resample("ME").sum() # una fila por mes (etiqueta: el último día del mes)
+# Agrupa todos los ingresos por mes sumándolos
+
+print(len(d), "días ->", len(semanal), "semanas ->", len(mensual), "meses")
+
+mensual.round(0).to_frame("ingreso_mes").T
+
+# Output
+# 720 días -> 105 semanas -> 24 meses 
+# Aquí va su respectivo gráfico (Una serie con cada agrupación)
+```
+
+Así mismo, puede realizar distintas agrupaciones:
+
+```Python
+# Varias agregaciones a la vez, por mes
+d["ingreso"].resample("ME").agg(["sum", "mean", "max", "size"]).round(1).head(6)
+```
+
+![tablasVariasFunciones](./sesion11/tablasVariasFunciones.png)
+
+```Python
+# La misma serie en tres frecuencias: diaria (ruido), semanal (temporada), mensual (tendencia)
+fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True) # sharex es para que comparten el mismo eje de las x
+d["ingreso"].plot(ax=axes[0], color="#A9B8C6", linewidth=0.8) # Mide en días (19 700 días)
+axes[0].set_title("Diaria: el día de la semana y las promociones tapan todo lo demás")
+
+# En realidad es .plot.line pero por defecto plot = plot.line
+semanal.plot(ax=axes[1], color="#768B9E") # Mide en meses (648 meses)
+axes[1].set_title("Semanal: se ve la temporada (mayo, diciembre) y el hueco de septiembre")
+
+mensual.plot(ax=axes[2], color="#2F3E4E", marker="o")
+axes[2].set_title("Mensual: la tendencia (2025 por encima de 2024) y febrero siempre bajo")
+
+for ax in axes:
+    ax.set_ylabel("ingreso (dólares)")
+axes[2].set_xlabel("fecha")
+
+fig.tight_layout()
+plt.show()
+```
+
+![setYFechas](./sesion11/setFechas.png)
+
+
+> Lectura: el mes con más ingreso es **2025-12** (16,708 dólares) -> `mensual.loc[mensual.idxmax()]`  y el 
+más bajo, **2024-02** -> `mensual.loc[mensual.idxmin()]`. En la diaria no se ve nada de eso.
+
+
+
+### La tendencia detrás del ruido: medias móviles y crecimiento
+
+Una **media móvil** (`rolling(7).mean()`) reemplaza cada valor por el promedio de los últimos 7 (una semana 
+completa: así el efecto del día de la semana desaparece). Con `rolling(30, center=True)` la ventana se 
+centra en cada fecha y la curva queda suave y sin retraso. Cuanto más ancha la ventana, más suave la curva y 
+menos detalle.
+
+Para **medir** el cambio: `diff()` (diferencia con el valor anterior), `pct_change()` (cambio porcentual con 
+el anterior: mes contra mes) y `shift(12)` sobre la serie mensual (el mismo mes del año anterior: 
+**año contra año**, que no se deja engañar por la temporada).
+
+
+```Python
+mm7 = d["ingreso"].rolling(7).mean()    # media de los últimos 7 días (los 6 primeros quedan NaN)
+mm30 = d["ingreso"].rolling(30, center=True).mean()    # ventana de 30 días centrada
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.plot(d.index, d["ingreso"], color="#A9B8C6", linewidth=0.7, label="diario")
+ax.plot(mm7.index, mm7, color="#768B9E", linewidth=1.5, label="media móvil 7 días")
+ax.plot(mm30.index, mm30, color="#2F3E4E", linewidth=2.2, label="media móvil 30 días")
+
+ax.set_xlabel("fecha")
+ax.set_ylabel("ingreso (dólares por día)")
+ax.set_title("El ingreso diario crece despacio y sube en mayo y diciembre: la media móvil lo muestra; el dato diario, no")
+
+ax.legend()
+fig.autofmt_xdate()
+
+plt.show()
+```
+
+![mediaMovi](./sesion11/mm.png)
+
+
+> Lo que realmente hace la media movil es eliminar el ruido.
+
+
+```Python
+# Crecimiento mes contra mes (pct_change) y año contra año (shift(12) sobre la serie mensual)
+crec_mes = (mensual.pct_change() * 100).round(1)                       # % respecto del mes anterior
+crec_anual_mes = ((mensual / mensual.shift(12) - 1) * 100).round(1)    # % respecto del mismo mes del año anterior
+
+tabla = pd.DataFrame({"ingreso": mensual.round(0), "vs_mes_anterior_%": crec_mes, "vs_mismo_mes_2024_%": crec_anual_mes})
+tabla.tail(8)
+```
+
+![crecimientoMensual](./sesion11/crecMensual.png)
+
+Lectura: mes contra mes, el mayor salto es **2025-10** (+20.3 %), pero es temporada (viene de un mes bajo). Año 
+contra año, 2025 queda por encima de 2024 casi todos los meses: eso sí es **crecimiento**.
+
+
+### Estacionalidad a simple vista: el patrón que se repite
+
+**Estacionalidad** es lo que se repite con un periodo fijo: cada semana (el sábado vende más), cada año (diciembre). 
+Se ve agrupando por la parte de la fecha que se repite:
+
+- por **día de la semana**: `groupby(d.index.dayofweek)` → el promedio de cada día;
+- por **mes**: una tabla mes × año (`pivot_table`) y una línea por año: si las líneas tienen la misma forma, hay temporada;
+- un **evento** (promoción, feriado) se compara con los días normales.
+
+
+#### Por día de la semana
+
+```Python
+# Recorando que d = vd.set_index("fecha").sort_index()     # la fecha como índice, ordenado
+
+por_dia = d.groupby(d.index.dayofweek)["ingreso"].mean()   # Agrupa por día (Los ingresos de los que tienen el mismo día de semana)
+
+fig, ax = plt.subplots(figsize=(7, 3.6))
+ax.bar(DIAS, por_dia, color=["#768B9E"] * 5 + ["#2F3E4E", "#A9B8C6"])
+# Siendo DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+
+for i, valor in enumerate(por_dia):
+    ax.text(i, valor + 8, f"{valor:.0f}", ha="center", fontsize=9)
+
+ax.set_xlabel("día de la semana")
+ax.set_ylabel("ingreso promedio (dólares por día)")
+ax.set_title("El sábado vende casi el doble que el domingo: patrón semanal estable")
+
+plt.show()
+```
+
+![ElSabado](./sesion11/elSabadoEsCine.png)
+
+
+#### Por mes
+
+```Python
+# Mes x año: una línea por año. Misma forma = temporada; una línea por encima = tendencia
+tabla_mes = d.pivot_table(index="mes", columns="anio", values="ingreso", aggfunc="sum").round(0)
+fig, ax = plt.subplots(figsize=(8, 3.8))
+
+for anio in tabla_mes.columns:
+    ax.plot(tabla_mes.index, tabla_mes[anio], marker="o", label=str(anio))
+
+ax.set_xticks(range(1, 13))
+ax.set_xlabel("mes")
+ax.set_ylabel("ingreso mensual (dólares)")
+ax.set_title("Los dos años tienen la misma forma (bajo en febrero, alto en mayo y diciembre); 2025 va por encima")
+
+ax.legend(title="año")
+plt.show()
+
+tabla_mes.T # La transpuesta de tabla mes (Para que sea leíble)
+```
+
+![NoEsMiTurno](./sesion11/NoEsMiTurno.png)
+
+
+#### Un evento
+
+```Python
+# Un evento: los 36 días con promoción frente a los días normales
+d.groupby("promocion")["ingreso"].agg(["mean", "median", "size"]).round(1)
+```
+
+![ustedesSon](./sesion11/ustedesSon.png)
+
+
+### Aunque ya lo vimos -> el gráfico de una serie de tiempo
+
+La serie va en **líneas** (el tiempo es continuo), la fecha en el eje x. cuide los siguientes aspectos:
+
+- `ax.plot(serie.index, serie)` o el atajo `serie.plot(ax=ax)`; `fig.autofmt_xdate()` inclina las fechas para que no se monten.
+
+- el eje y **con unidad**; si se comparan series, la misma escala.
+
+- la serie cruda en gris claro y la media móvil encima, oscura: el lector ve el ruido y la tendencia.
+
+- los **eventos** se marcan: `ax.axvspan(inicio, fin)` sombrea un periodo; `ax.axvline(fecha)` marca un 
+día; `ax.annotate` pone el texto con una flecha.
+
+- el **título dice la conclusión** («diciembre dobla a febrero»), no el nombre de las columnas.
+
+
+```Python
+fig, ax = plt.subplots(figsize=(10, 4.2))
+ax.plot(d.index, d["ingreso"], color="#A9B8C6", linewidth=0.7, label="ingreso diario")
+ax.plot(mm30.index, mm30, color="#2F3E4E", linewidth=2.2, label="media móvil 30 días")
+
+# Sombrear los dos diciembres (Picos), sin contar 2024
+for anio in (2024, 2025):           
+    ax.axvspan(pd.Timestamp(f"{anio}-12-01"), pd.Timestamp(f"{anio}-12-24"), color="#FFF9B0", alpha=0.7, label="diciembre" if anio == 2024 else None)
+
+# Mencionar días interpolados
+ax.axvline(pd.Timestamp("2025-09-16"), color="#B4483C", linestyle="--", linewidth=1)
+ax.annotate("sistema caído\n(3 días interpolados)", xy=(pd.Timestamp("2025-09-16"), 850), xytext=(pd.Timestamp("2025-06-10"), 900),
+            arrowprops=dict(arrowstyle="->", color="#B4483C"), fontsize=9, color="#B4483C")
+
+ax.set_xlabel("fecha")
+ax.set_ylabel("ingreso (dólares por día)")
+ax.set_title("La tienda crece un 9 % en 2025; diciembre queda un 15-20 % por encima del resto del año")
+ax.legend(loc="upper left")
+fig.autofmt_xdate()
+
+os.makedirs("figuras", exist_ok=True)
+fig.savefig("figuras/s12_ingreso_diario.png", dpi=150, bbox_inches="tight")  # Para un informe: 150 dpi, antes de plt.show()
+```
+
+![final](./sesion11/crecimientoTiendaFinal.png)
+
+
+## Visualizaciones efectivas
+
+Hasta ahora, hemos visto cómo realizar histogramas, diagramas de cajas, barras, dispersión y líneas conforme a datos. Pero
+¿El gráfico que estoy haciendo de verdad comunica? Un gráfico efectivo responde una pregunta, se entiende sin que nadie lo 
+explique, no engaña con los ejes ni con el color y dice en el título lo que hay que ver. Para entender los ejemplos, estaremos
+trabajando con:
+
+```Python
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.colors import to_hex
+from matplotlib.patches import Rectangle
+
+v = pd.read_csv("datos/ventas_completo.csv", parse_dates=["fecha"])
+c = pd.read_csv("datos/cosechas.csv", parse_dates=["fecha_siembra"])
+e = pd.read_csv("datos/entregas.csv", parse_dates=["fecha"])
+vd = pd.read_csv("datos/ventas_diarias.csv", parse_dates=["fecha"]).set_index("fecha").sort_index()
+
+SLATE, DARK, LIGHT, RED, YELLOW = "#768B9E", "#2F3E4E", "#C9D3DC", "#B4483C", "#E0B400"
+
+def titulo_de(ax):
+    # el título del eje, esté centrado o a la izquierda (loc="left")
+    return ax.get_title() or ax.get_title(loc="left") or ax.get_title(loc="right")
+```
+
+### Qué gráfico para qué pregunta
+
+El gráfico se elige por la **pregunta**, no por el gusto. Los seis del curso cubren casi todo:
+
+| Pregunta | Gráfico | Ejemplo |
+| :-- | :-- | :-- |
+| ¿cuánto vale cada **categoría**? (comparar) | **barras** (ordenadas; horizontales si los nombres son largos) | ingreso por categoría |
+| ¿cómo se **distribuye** una variable? | **histograma** (o diagrama de caja) | tiempo de entrega |
+| ¿la distribución **cambia según el grupo**? | **cajas** por grupo | costo por tipo de servicio |
+| ¿**x se relaciona con y**? | **dispersión** | peso y precio del camarón |
+| ¿cómo **cambia con el tiempo**? | **líneas** | ingreso mensual |
+| ¿cómo se **reparte** un total entre partes? | **barras apiladas al 100 %** (nunca pastel) | método de pago por ciudad |
+
+Un gráfico, **un mensaje**: si hay que decir dos cosas, son dos gráficos (o un panel).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
