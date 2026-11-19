@@ -2543,8 +2543,390 @@ El gráfico se elige por la **pregunta**, no por el gusto. Los seis del curso cu
 
 Un gráfico, **un mensaje**: si hay que decir dos cosas, son dos gráficos (o un panel).
 
+```Python
+# Los seis gráficos del curso, cada uno con su pregunta
+fig, axes = plt.subplots(2, 3, figsize=(13, 7))  # 2 filas, 3 columnas
+
+a = axes.flat  # axes no será una matriz, será un arreglo
+
+# comparar categorías: barras ordenadas
+ing_cat = v.groupby("categoria")["ingreso"].sum().sort_values(ascending=False)
+a[0].bar(ing_cat.index, ing_cat, color=SLATE)
+a[0].set_title("¿Qué categoría genera más ingreso? → barras")
+a[0].set_ylabel("ingreso (dólares)")
+
+# distribución: histograma
+a[1].hist(e["tiempo_min"], bins=25, color=SLATE, edgecolor="white")
+a[1].set_title("¿Cómo se distribuye el tiempo de entrega? → histograma")
+a[1].set_xlabel("tiempo (min)")
+a[1].set_ylabel("entregas")
+
+# distribución por grupo: cajas
+grupos = [e.loc[e["tipo_servicio"] == s, "costo"] for s in ["económico", "estándar", "express"]]
+a[2].boxplot(grupos) # múltiples boxplot pero con matplotlib y no pandas
+a[2].set_xticks([1, 2, 3], ["económico", "estándar", "express"])
+a[2].set_title("¿El costo cambia según el servicio? → cajas")
+a[2].set_ylabel("costo (dólares)")
+
+# relación: dispersión
+a[3].scatter(c["peso_g"], c["precio_kg"], alpha=0.4, s=12, color=SLATE) 
+a[3].set_title("¿El peso se relaciona con el precio? → dispersión")
+a[3].set_xlabel("peso (g)")
+a[3].set_ylabel("precio (dólares/kg)")
+
+# tiempo: líneas
+mensual = vd["ingreso"].resample("ME").sum()
+a[4].plot(mensual.index, mensual, color=DARK, marker="o", markersize=3)
+a[4].set_title("¿Cómo cambia el ingreso mes a mes? → líneas")
+a[4].set_ylabel("ingreso (dólares)")
+a[4].tick_params(axis="x", rotation=30)
+
+# composición: barras apiladas al 100 %
+comp = pd.crosstab(v["ciudad"], v["metodo_pago"], normalize="index")
+comp.plot.bar(stacked=True, ax=a[5], color=[LIGHT, SLATE, DARK, YELLOW]) # Stacked -> Apiladas
+a[5].set_title("¿Cómo se reparte el pago en cada ciudad? → apiladas 100 %")
+a[5].set_ylabel("proporción")
+a[5].set_xlabel("")
+a[5].legend(fontsize=7, title="pago")
+a[5].tick_params(axis="x", rotation=30)
+
+fig.tight_layout()
+plt.show()
+```
+
+![losTopsGlobales](./sesion12/losTopsGlobales.png)
+
+### Ejes y escalas honestas
+
+Al representar un mismo dato de forma gráfica (obvio), puede representar una gran diferencia o 
+ninguna **DEPENDIENDO DEL EJE**.
+
+El mismo dato puede parecer una diferencia enorme o ninguna según el eje. Cuatro reglas:
+
+1. Las **barras empiezan en cero**: la altura *es* el valor; un eje cortado (`ylim` que no parte de 0) exagera
+diferencias pequeñas. Las **líneas** pueden no empezar en cero (lo que importa es la variación), pero entonces 
+el eje se lee con cuidado.
+
+2. **Paneles comparables, misma escala** (`sharey=True`, `sharex=True`): si cada panel tiene su eje, no se 
+pueden comparar.
+
+3. Valores que abarcan **varios órdenes de magnitud** (de 2 000 a 146 000): escala **logarítmica** 
+(`ax.set_xscale("log")`), y se dice en la etiqueta.
+
+4. La **proporción** del gráfico (alto / ancho) cambia la pendiente aparente: una línea casi plana en un gráfico 
+ancho parece empinada en uno alto. Use proporciones razonables (4:3, 16:9) y la misma para gráficos que se comparan.
+
+#### Primera regla
 
 
+```Python
+# Regla 1: el mismo dato con eje cortado y con eje desde cero. Guayaquil vendió 9.3 % más que Quito, no cuatro veces más
+ing_ciudad = v.groupby("ciudad")["ingreso"].sum().loc[["Guayaquil", "Quito"]]
+
+fig, axes = plt.subplots(1, 2, figsize=(9, 3.5))
+
+# Recuerde que zip hace un (clave, valor)
+for ax, (titulo, desde) in zip(axes, [("Eje cortado: parece 4 veces más", 3000), ("Eje desde cero: 9.3 % más", 0)]):
+    ax.bar(ing_ciudad.index, ing_ciudad, color=SLATE)
+
+    ax.set_ylim(desde, 3500) # PARA SETEAR EJE VERTICAL
+
+    ax.set_title(titulo)
+    ax.set_ylabel("ingreso (dólares)")
+
+    # Recuerde que enumerate ITERA la serie, i es num iteración, val es el valor 
+    for i, val in enumerate(ing_ciudad):
+        ax.text(i, val + 20, f"{val:,.0f}", ha="center", fontsize=9)
+
+fig.tight_layout()
+plt.show()
+```
+
+![ejeHonesto](./sesion12/ejeHonesto.png)
+
+
+
+#### Segunda regla
+
+```Python
+# Regla 2: paneles con y sin eje compartido
+fig, axes = plt.subplots(1, 3, figsize=(11, 3.2), sharey=True) # CLAVE sharey=True
+
+for ax, serv in zip(axes, ["económico", "estándar", "express"]):
+    ax.hist(e.loc[e["tipo_servicio"] == serv, "costo"], bins=15, color=SLATE, edgecolor="white")
+    ax.set_title(serv)
+    ax.set_xlabel("costo (dólares)")
+
+axes[0].set_ylabel("entregas")
+fig.suptitle("Con sharey=True se ve que express cuesta más y es menos frecuente; con ejes libres cada panel parecería igual", fontsize=10)
+
+fig.tight_layout()
+plt.show()
+```
+
+
+![MiTurnoPorNose](./sesion12/escalaLog.png)
+
+
+> Si dejamos la gráfica en la escala lineal, nótese que el dato atípico deja una cola a la derecha, con la escala logarítmica, podemos ver mejor la forma de la distribución (Cuando son escalas muy grandes).
+
+
+### Color con Intención
+
+Cuando representamos gráficos, el color es un mensaje, no una decoración. Considere las siguientes
+""reglas"":
+
+- **Un color para todo, y otro para lo que importa**: la barra o la línea del hallazgo en oscuro, 
+el resto en gris. Más de 3 o 4 colores en un gráfico ya no se distinguen.
+
+- **Paleta según la variable**
+    * categorías sin orden → colores distintos (paleta **categórica**). 
+    * categorías ordenadas (pequeña, mediana, grande) → del claro al oscuro (paleta **secuencial**).
+    * valores alrededor de un centro (correlación de −1 a 1) → dos colores con blanco en medio (paleta **divergente**, como el mapa de calor).
+
+- **Daltonismo** (1 de cada 12 hombres): nunca rojo frente a verde como única diferencia:
+use claro/oscuro, azul/naranja, o la paleta `"colorblind"` de seaborn.
+
+- El **mismo color significa lo mismo** en todas las figuras del informe (Guayaquil siempre del mismo color).
+
+
+```Python
+# Destacar una: la categoría que responde la pregunta, en oscuro; el resto en gris
+ing_cat = v.groupby("categoria")["ingreso"].sum().sort_values(ascending=False)
+
+colores = [DARK if cat == "Hogar" else LIGHT for cat in ing_cat.index]
+
+fig, ax = plt.subplots(figsize=(7, 3.4))
+
+ax.bar(ing_cat.index, ing_cat, color=colores)
+
+ax.set_title("Hogar genera casi tanto ingreso como Electrónica con menos ventas")
+ax.set_ylabel("ingreso (dólares)"); ax.set_xlabel("categoría")
+
+plt.show()
+```
+
+![colores](./sesion12/colores.png)
+
+
+```Python
+# Paleta secuencial para una variable ordenada (tamaño: pequeña < mediana < grande)
+tam = v.groupby("tamano")["ingreso"].mean().reindex(["pequeña", "mediana", "grande"])
+
+fig, ax = plt.subplots(figsize=(6, 3.2))
+ax.bar(tam.index, tam, color=[LIGHT, SLATE, DARK])     # del claro al oscuro: el orden se ve sin leer
+
+ax.set_title("El ticket promedio crece con el tamaño del producto")
+ax.set_ylabel("ingreso promedio por venta (dólares)"); ax.set_xlabel("tamaño")
+
+plt.show()
+```
+
+![paletaSecuencial](./sesion12/paletaSecuencial.png)
+
+
+```Python
+# Paletas de seaborn: categórica apta para daltónicos, secuencial y divergente
+import seaborn as sns
+
+fig, axes = plt.subplots(3, 1, figsize=(7, 2.4))
+
+for ax, (nombre, pal) in zip(axes, [("colorblind (categórica)", sns.color_palette("colorblind", 6)),
+                                    ("Blues (secuencial)", sns.color_palette("Blues", 6)),
+                                    ("RdBu_r (divergente)", sns.color_palette("RdBu_r", 6))]):
+
+    for i, col in enumerate(pal):
+        ax.bar(i, 1, color=col, width=0.9)
+
+    ax.set_title(nombre, fontsize=9, loc="left"); ax.set_axis_off()
+
+fig.tight_layout()
+plt.show()
+```
+
+### Texto que ayuda: el título dice la conlusión
+
+- El **título es la conclusión**: «El sábado vende el doble que el domingo», no «Ingreso por día de 
+la semana». Lo que describe las variables va en los ejes o en un subtítulo (`ax.set_title(..., loc="left")`
+para la conclusión y `ax.text` o `fig.suptitle` para el subtítulo).
+
+- **Etiquetas con unidad** en los ejes y los **valores sobre las barras** cuando 
+importan (`ax.bar_label(barras, fmt="%.0f")`).
+
+- **Etiquetas directas** en vez de leyenda: el nombre de cada línea al final de la 
+línea (`ax.text`); la leyenda obliga a ir y volver.
+
+- **Una anotación** para el punto clave (`ax.annotate` con flecha): el pico, el cambio, el dato raro.
+
+- Sin cajas alrededor de la leyenda (`frameon=False`) ni títulos en mayúsculas.
+
+```Python
+# Antes / después: el mismo gráfico con texto que describe y con texto que concluye
+por_dia = vd.groupby(vd.index.dayofweek)["ingreso"].mean()
+DIAS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 3.6))
+
+axes[0].bar(DIAS, por_dia, color=SLATE)
+axes[0].set_title("Ingreso por día de la semana"); axes[0].set_ylabel("ingreso")
+barras = axes[1].bar(DIAS, por_dia, color=[LIGHT] * 5 + [DARK, LIGHT])
+
+axes[1].bar_label(barras, fmt="%.0f", fontsize=8, padding=2)
+axes[1].set_title("El sábado vende casi el doble que el domingo", loc="left", fontweight="bold")
+#axes[1].text(0, 1.02, "ingreso promedio por día, 2024-2025", transform=axes[1].transAxes, fontsize=9, color="gray")
+axes[1].set_ylabel("ingreso promedio (dólares por día)"); axes[1].set_xlabel("día de la semana")
+axes[1].annotate("el día más flojo", xy=(6, por_dia.iloc[6]), xytext=(4.6, 560), arrowprops=dict(arrowstyle="->", color=RED), color=RED, fontsize=9)
+
+fig.tight_layout()
+plt.show()
+```
+
+![cancelacionRuido](./sesion12/cancelacionRuido.png)
+
+
+```Python
+# Etiquetas directas en vez de leyenda: una línea por año, con el año al final de cada línea
+tabla_mes = vd.pivot_table(index=vd.index.month, columns=vd.index.year, values="ingreso", aggfunc="sum")
+
+fig, ax = plt.subplots(figsize=(8, 3.8))
+
+for anio, color in zip(tabla_mes.columns, [LIGHT, DARK]):
+    ax.plot(tabla_mes.index, tabla_mes[anio], marker="o", color=color, linewidth=2)
+    ax.text(12.2, tabla_mes[anio].iloc[-1], str(anio), color=color, va="center", fontweight="bold")   # el nombre al final de la línea
+
+ax.set_xticks(range(1, 13)); ax.set_xlim(0.5, 13)
+ax.set_title("2025 supera a 2024 en 11 de los 12 meses; la forma del año se repite", loc="left")
+ax.set_xlabel("mes"); ax.set_ylabel("ingreso mensual (dólares)")
+
+plt.show()
+```
+
+![AsiEsS](./sesion12/AsiEsS.png)
+
+
+### Menos es más: quitar lo que no informa
+
+Todo lo que no es dato compite con el dato (*chartjunk*): fondos, bordes, cuadrículas pesadas, 3D, marcos de leyenda, 
+demasiadas marcas, decimales de más. Quitar:
+
+- los bordes superior y derecho (`ax.spines["top"].set_visible(False)`), la cuadrícula a una ligera 
+(`ax.grid(axis="y", alpha=0.3)`) y detrás de las barras (`ax.set_axisbelow(True)`).
+
+- las categorías que no caben: las 8 más frecuentes y "otras".
+
+- las barras desordenadas: **ordenar** por valor (salvo que la categoría tenga orden propio: meses, tallas).
+
+- el *spaghetti*: cinco líneas que se cruzan → **pequeños múltiplos** (`subplots` con `sharey`), o una línea 
+destacada y el resto en gris.
+
+Como cada gráfico compartirá lo mismo, se escriben una vez en una **función** `estilo(ax)` y se llama siempre.
+
+```Python
+def estilo(ax):
+    """Limpieza estándar de un gráfico del informe: sin bordes de arriba y derecha, cuadrícula ligera detrás."""
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.grid(axis="y", alpha=0.3)
+    ax.set_axisbelow(True)
+
+# Antes: cuadrícula pesada, bordes, colores de más, barras sin orden. 
+ing_ciudad = v.groupby("ciudad")["ingreso"].sum()
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 3.6))
+
+axes[0].bar(ing_ciudad.index, ing_ciudad, color=["red", "green", "blue", "orange", "purple", "brown"])
+axes[0].grid(True, color="black")
+axes[0].set_title("ANTES: INGRESO POR CIUDAD")
+axes[0].tick_params(axis="x", rotation=45)
+
+### Después: estilo(ax), orden, un color.
+orden = ing_ciudad.sort_values(ascending=False)
+axes[1].bar(orden.index, orden, color=SLATE)
+
+estilo(axes[1])
+
+axes[1].set_title("Después: Guayaquil y Quito suman dos tercios del ingreso", loc="left")
+axes[1].set_ylabel("ingreso (dólares)")
+axes[1].tick_params(axis="x", rotation=30)
+
+fig.tight_layout()
+plt.show()
+```
+
+![maCiudad](./sesion12/maDicen.png)
+
+
+```Python
+# Esto es para evitar poner múltiples gráficos de línea en un solo ax
+# Spaghetti -> pequeños múltiplos: entregas por semana en cada ciudad (sin la primera y la última semana, incompletas)
+sem_ciudad = e.groupby([pd.Grouper(key="fecha", freq="W"), "ciudad"]).size().unstack(fill_value=0).iloc[1:-1]
+
+fig, axes = plt.subplots(1, 5, figsize=(13, 2.8), sharey=True)
+
+for ax, ciudad in zip(axes, sem_ciudad.columns):
+    ax.plot(sem_ciudad.index, sem_ciudad[ciudad], color=DARK, marker="o", markersize=3)
+    ax.set_title(ciudad, fontsize=10); ax.tick_params(axis="x", rotation=60, labelsize=7); estilo(ax)
+
+axes[0].set_ylabel("entregas por semana")
+fig.suptitle("Guayaquil nunca baja de 15 entregas por semana; Quito oscila entre 8 y 20; las otras tres no pasan de 9", x=0.01, ha="left", fontsize=11)
+
+fig.tight_layout()
+plt.show()
+```
+
+
+![sphagetti](./sesion12/sph.png)
+
+
+
+### seaborn: menos código, estilo coherente
+
+**seaborn** está construido sobre matplotlib. Da un estilo limpio con una línea (`sns.set_theme(style="whitegrid")`), 
+dibuja directamente desde un DataFrame (`data=`, `x=`, `y=`, `hue=`) y hace en una llamada lo que en matplotlib son 
+varias (barras por grupo, cajas por grupo, líneas por categoría, paneles por una columna con `catplot`/`relplot`). A 
+cambio, menos control fino; como devuelve un `ax`, lo de matplotlib (título, etiquetas, `estilo`) sigue aplicándose.
+De todas formas, **las reglas anteriores no cambian**: título con la conclusión y unidades.
+
+
+```Python
+import seaborn as sns  # CLAVE
+
+sns.set_theme(style="whitegrid", palette="colorblind")
+
+fig, axes = plt.subplots(1, 3, figsize=(13, 3.6))
+
+sns.barplot(data=v, x="categoria", y="ingreso", estimator="sum", errorbar=None, color=SLATE, ax=axes[0])
+axes[0].set_title("Ingreso por categoría (barplot)"); axes[0].set_ylabel("ingreso (dólares)")
+
+sns.boxplot(data=e, x="tipo_servicio", y="costo", order=["económico", "estándar", "express"], color=LIGHT, ax=axes[1])
+axes[1].set_title("Costo por servicio (boxplot)"); axes[1].set_ylabel("costo (dólares)")
+
+tabla_larga = vd.groupby([vd.index.year.rename("anio"), vd.index.month.rename("mes")])["ingreso"].sum().reset_index()
+sns.lineplot(data=tabla_larga, x="mes", y="ingreso", hue="anio", marker="o", palette=[LIGHT, DARK], ax=axes[2])
+axes[2].set_title("Ingreso mensual por año (lineplot con hue)"); axes[2].set_ylabel("ingreso (dólares)")
+
+fig.tight_layout()
+plt.show()
+```
+
+![topsGlobalesCarajo](./sesion12/topsGlobalesParte1.png)
+
+
+```Python
+# Paneles por una columna en una sola llamada: catplot (cajas de costo por servicio, un panel por ciudad)
+g = sns.catplot(data=e, x="tipo_servicio", y="costo", col="ciudad", kind="box", order=["económico", "estándar", "express"],
+                col_wrap=5, height=2.8, aspect=0.9, color=LIGHT)
+
+g.set_axis_labels("tipo de servicio", "costo (dólares)")
+g.tick_params(axis="x", rotation=30)
+g.figure.suptitle("El costo del servicio express es mayor en todas las ciudades", y=1.03)
+
+plt.show()
+sns.reset_orig()
+```
+
+
+![distintasCajas](./sesion12/distintasCajas.png)
 
 
 
